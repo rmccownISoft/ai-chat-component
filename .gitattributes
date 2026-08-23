@@ -1,0 +1,14 @@
+# Normalize line endings. Everything text is stored as LF in the repo and
+# checked out with your platform's native endings. This stops CRLF-vs-LF
+# "phantom" conflicts no matter what committed a file (your editor, the
+# GitHub web UI, a tool). Takes precedence over core.autocrlf.
+* text=auto
+
+# Binaries: never run line-ending conversion on these.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
