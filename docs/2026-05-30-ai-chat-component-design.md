@@ -69,15 +69,18 @@ ai-chat-component/               # the library project (published as @your-org/a
 ### High-Level Components
 
 **Client-side library exports:**
+
 - `<AIChat />` — main component (header, message list, composer)
 - `createChatSession()` — factory for session state and lifecycle
 - Type exports: `Message`, `ContentBlock`, `ChatSession`, `ContextEntry`, `Provider`, `StorageCallbacks`, etc.
 
 **Server-side (handler factories the library ships; the consumer app mounts the routes):**
+
 - `POST /api/ai-chat/stream` — streams LLM responses via Vercel AI SDK
 - `POST /api/ai-chat/upload` — placeholder for v1; built only if inline base64 proves insufficient
 
 **Provider layer (server-side):**
+
 - Thin abstraction over `@ai-sdk/anthropic` and `@ai-sdk/openai`
 - Selected per-request based on the `provider` field
 - The client never imports provider SDKs directly
@@ -90,57 +93,57 @@ ai-chat-component/               # the library project (published as @your-org/a
 type Provider = 'claude' | 'openai'
 
 type ContentBlock =
-  | { type: 'text';      id: string; text: string }
-  | { type: 'code';      id: string; language: string; code: string }
-  | { type: 'image';     id: string; url: string; alt?: string }
-  | { type: 'html';      id: string; html: string }       // sandboxed iframe in v1
-  | { type: 'chart';     id: string; spec: unknown }      // vega-lite spec
-  | { type: 'tool_call'; id: string; name: string; args: unknown; result?: unknown }
+	| { type: 'text'; id: string; text: string }
+	| { type: 'code'; id: string; language: string; code: string }
+	| { type: 'image'; id: string; url: string; alt?: string }
+	| { type: 'html'; id: string; html: string } // sandboxed iframe in v1
+	| { type: 'chart'; id: string; spec: unknown } // vega-lite spec
+	| { type: 'tool_call'; id: string; name: string; args: unknown; result?: unknown }
 
 type Attachment = {
-  id: string
-  filename: string
-  mimeType: string
-  size: number
-  data: string            // base64 in v1
+	id: string
+	filename: string
+	mimeType: string
+	size: number
+	data: string // base64 in v1
 }
 
 type Message = {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  blocks: ContentBlock[]
-  provider?: Provider     // which provider generated this (assistant only)
-  model?: string
-  createdAt: number
-  attachments?: Attachment[]
+	id: string
+	role: 'user' | 'assistant' | 'system'
+	blocks: ContentBlock[]
+	provider?: Provider // which provider generated this (assistant only)
+	model?: string
+	createdAt: number
+	attachments?: Attachment[]
 }
 
 type ContextEntry = {
-  id: string
-  source: 'baseline' | 'route' | 'manual'
-  content: string
-  priority?: number       // higher = appears earlier in system prompt
+	id: string
+	source: 'baseline' | 'route' | 'manual'
+	content: string
+	priority?: number // higher = appears earlier in system prompt
 }
 
 type ChatSession = {
-  id: string
-  title?: string          // auto-generated from first message, editable
-  messages: Message[]
-  context: ContextEntry[]
-  provider: Provider
-  model: string
-  memoryHints: string[]   // v2 populates; v1 leaves empty
-  createdAt: number
-  updatedAt: number
+	id: string
+	title?: string // auto-generated from first message, editable
+	messages: Message[]
+	context: ContextEntry[]
+	provider: Provider
+	model: string
+	memoryHints: string[] // v2 populates; v1 leaves empty
+	createdAt: number
+	updatedAt: number
 }
 
 type SessionSummary = {
-  id: string
-  title: string
-  provider: Provider
-  model: string
-  messageCount: number
-  updatedAt: number
+	id: string
+	title: string
+	provider: Provider
+	model: string
+	messageCount: number
+	updatedAt: number
 }
 ```
 
@@ -160,6 +163,7 @@ The `/api/ai-chat/stream` route:
 6. Client uses the AI SDK's Svelte `useChat` hook to consume the stream
 
 The route is responsible for:
+
 - Server-side credential lookup (env vars in v1; pluggable in a later version)
 - MCP connection lifecycle (open, pass tools, close on stream end)
 - Provider selection
@@ -170,12 +174,14 @@ The route is responsible for:
 ## Provider Selection
 
 UI exposes two dropdowns in the header:
+
 - **Provider** — Claude / OpenAI
 - **Model** — filtered by provider
 
 Both populated from a `models` prop on the component, so the parent app controls which providers/models are available based on which keys are configured.
 
 **Switching providers mid-conversation** with existing assistant messages: show a confirm modal with three options:
+
 1. **Continue here** — keep history, send all messages to the new provider
 2. **Start new chat** — fresh session, new provider
 3. **Cancel** — revert the dropdown
@@ -233,6 +239,7 @@ onSessionUpdate(session: ChatSession): void | Promise<void>
 …after each message exchange (debounced ~500ms). Parent app persists to its own backend (MySQL/GraphQL/etc.).
 
 Loading prior sessions:
+
 ```ts
 loadSession(sessionId: string): Promise<ChatSession>
 listSessions(): Promise<SessionSummary[]>
@@ -248,13 +255,14 @@ The `memoryHints: string[]` field on `ChatSession` is included in the assembled 
 
 ```ts
 type MemoryHint = {
-  taskType: string         // 'inventory_summary' | 'work_order_summary' | ...
-  preferences: string      // free-form text describing the preference
-  examples?: string[]      // exemplar outputs the user has approved
+	taskType: string // 'inventory_summary' | 'work_order_summary' | ...
+	preferences: string // free-form text describing the preference
+	examples?: string[] // exemplar outputs the user has approved
 }
 ```
 
 Plus a v2 callback:
+
 ```ts
 onMemoryCandidate(text: string, context: { taskType?: string }): void
 ```
@@ -266,6 +274,7 @@ Fired when the model indicates something might be worth remembering. The parent 
 ## Multimodal Input
 
 **v1 support:**
+
 - **Images** (png, jpg, webp, gif) — sent as attachments, rendered as thumbnails in the user's message bubble
 - **PDFs** — sent as attachments; both Claude and OpenAI handle these natively
 - **Text/code files** (.txt, .md, .csv, common code extensions) — content embedded inline in the user's message as a code block
@@ -280,14 +289,14 @@ Fired when the model indicates something might be worth remembering. The parent 
 
 All content blocks render inline in the message stream:
 
-| Block type   | v1 rendering |
-|--------------|--------------|
-| `text`       | Markdown (with sanitization) |
-| `code`       | Syntax-highlighted code block, copy button |
-| `image`      | `<img>` element, click to enlarge |
-| `html`       | Sandboxed `<iframe>` with `sandbox="allow-scripts"`, content via `srcdoc`. **No** `allow-same-origin` — defeats sandboxing when combined with `allow-scripts`. |
-| `chart`      | Vega-Lite rendered chart (chosen for spec portability to v2 panel view) |
-| `tool_call`  | Collapsed indicator: `"Called `name`"`; expandable to show args and result JSON |
+| Block type  | v1 rendering                                                                                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`      | Markdown (with sanitization)                                                                                                                                   |
+| `code`      | Syntax-highlighted code block, copy button                                                                                                                     |
+| `image`     | `<img>` element, click to enlarge                                                                                                                              |
+| `html`      | Sandboxed `<iframe>` with `sandbox="allow-scripts"`, content via `srcdoc`. **No** `allow-same-origin` — defeats sandboxing when combined with `allow-scripts`. |
+| `chart`     | Vega-Lite rendered chart (chosen for spec portability to v2 panel view)                                                                                        |
+| `tool_call` | Collapsed indicator: `"Called `name`"`; expandable to show args and result JSON                                                                                |
 
 **v2 additions:** side-panel layout, artifact selection, artifact version history within a conversation, full-screen mode.
 
@@ -301,10 +310,10 @@ The library is backend-agnostic. The parent app implements:
 
 ```ts
 type StorageCallbacks = {
-  onSessionUpdate?: (session: ChatSession) => void | Promise<void>
-  loadSession?:     (sessionId: string) => Promise<ChatSession>
-  listSessions?:    () => Promise<SessionSummary[]>
-  deleteSession?:   (sessionId: string) => Promise<void>
+	onSessionUpdate?: (session: ChatSession) => void | Promise<void>
+	loadSession?: (sessionId: string) => Promise<ChatSession>
+	listSessions?: () => Promise<SessionSummary[]>
+	deleteSession?: (sessionId: string) => Promise<void>
 }
 ```
 
@@ -317,6 +326,7 @@ All callbacks are optional. With none provided, the component works as an epheme
 **Approach:** stock Bootstrap 5 utility classes used directly in the markup. No custom BEM, no namespaced classes, no shipped theme.
 
 **Examples:**
+
 - Container: `class="d-flex flex-column h-100"`
 - Header: `class="d-flex justify-content-between align-items-center p-2 border-bottom"`
 - Message list: `class="flex-grow-1 overflow-auto p-3"`
@@ -332,6 +342,7 @@ type ButtonClasses = `btn-${ButtonColors}` | `btn-outline-${Colors}`
 ```
 
 Component props expose styling decisions parent apps will want to customize:
+
 - `sendButtonStyle: ButtonClasses` — default `'btn-primary'`
 - `attachButtonStyle: ButtonClasses` — default `'btn-outline-secondary'`
 - `userMessageBgClass: string` — default `'bg-body-secondary'`
@@ -367,17 +378,17 @@ Component props expose styling decisions parent apps will want to customize:
 
 ## Decision Log
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Repo structure | Single SvelteKit library project (`@sveltejs/package` template); `src/lib` is published, `src/routes` is the built-in dev/playground | Simpler than a monorepo for one component; the library template already bundles a consumer playground, so a separate demo app isn't needed |
-| API key handling (v1) | Env vars only | Simplest; abstracted server-side so runtime keys are easy to add later |
-| Parent integration | Callback/event based | Backend-agnostic; matches user's existing pattern |
-| Context injection | Static baseline + dynamic per-route + manual | Flexible without overcomplication |
-| Message storage shape | Typed content blocks with stable IDs | Enables v2 side-panel artifacts without rewrite |
-| Provider switch mid-chat | Confirm modal: continue / new / cancel | User-friendly, avoids surprises |
-| MCP scope v1 | One configurable server | Useful, not over-scoped |
-| Long-term memory v1 | Slot in data model, no implementation | Defers complex work without painting into a corner |
-| Multimodal v1 | Images, PDFs, text/code files; base64 inline | Covers core use cases; upload endpoint deferred |
-| Artifact rendering v1 | Inline only, sandboxed iframe for HTML | Ship faster; v2 adds panel layout |
-| Chart library | Vega-Lite | Spec portability to future panel view |
-| Styling | Stock BS5 utilities, BS5-only | Matches company conventions; team is mid-migration to BS5 |
+| Decision                 | Choice                                                                                                                               | Rationale                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repo structure           | Single SvelteKit library project (`@sveltejs/package` template); `src/lib` is published, `src/routes` is the built-in dev/playground | Simpler than a monorepo for one component; the library template already bundles a consumer playground, so a separate demo app isn't needed |
+| API key handling (v1)    | Env vars only                                                                                                                        | Simplest; abstracted server-side so runtime keys are easy to add later                                                                     |
+| Parent integration       | Callback/event based                                                                                                                 | Backend-agnostic; matches user's existing pattern                                                                                          |
+| Context injection        | Static baseline + dynamic per-route + manual                                                                                         | Flexible without overcomplication                                                                                                          |
+| Message storage shape    | Typed content blocks with stable IDs                                                                                                 | Enables v2 side-panel artifacts without rewrite                                                                                            |
+| Provider switch mid-chat | Confirm modal: continue / new / cancel                                                                                               | User-friendly, avoids surprises                                                                                                            |
+| MCP scope v1             | One configurable server                                                                                                              | Useful, not over-scoped                                                                                                                    |
+| Long-term memory v1      | Slot in data model, no implementation                                                                                                | Defers complex work without painting into a corner                                                                                         |
+| Multimodal v1            | Images, PDFs, text/code files; base64 inline                                                                                         | Covers core use cases; upload endpoint deferred                                                                                            |
+| Artifact rendering v1    | Inline only, sandboxed iframe for HTML                                                                                               | Ship faster; v2 adds panel layout                                                                                                          |
+| Chart library            | Vega-Lite                                                                                                                            | Spec portability to future panel view                                                                                                      |
+| Styling                  | Stock BS5 utilities, BS5-only                                                                                                        | Matches company conventions; team is mid-migration to BS5                                                                                  |
