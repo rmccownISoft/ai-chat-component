@@ -67,7 +67,10 @@
 		"svelte"
 	],
 	"dependencies": {
-		"@isoftdata/utility-bootstrap": "^2.2.3"
+		"@ai-sdk/anthropic": "^4.0.41",
+		"@ai-sdk/svelte": "^5.0.77",
+		"@isoftdata/utility-bootstrap": "^2.2.3",
+		"ai": "^7.0.77"
 	},
 	"prettier": "@isoftdata/prettier-config"
 }
