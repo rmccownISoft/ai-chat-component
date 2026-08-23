@@ -1,8 +1,9 @@
 ## What This Project Is
 
-A reusable SvelteKit library (`@your-org/ai-chat`) providing a multi-provider AI chat component (Claude + OpenAI) for embedding in the company's internal web apps. Built as a pnpm monorepo with a demo app.
+A reusable SvelteKit library (`@your-org/ai-chat`) providing a multi-provider AI chat component (Claude + OpenAI) for embedding in the company's internal web apps. Built as a single SvelteKit library project (the `@sveltejs/package` template); its built-in `src/routes` app is the local dev/demo playground.
 
 **Two source-of-truth documents** live in `docs/`:
+
 - `*-design.md` — the spec. Architecture, data model, decisions, rationale.
 - `*-tickets.md` — the implementation plan. Phased ticket breakdown with progress notes.
 
@@ -27,12 +28,14 @@ These goals all point the same direction: the developer needs to genuinely under
 This is the most important instruction in this file. The developer is here to learn by writing the code themselves. Writing code for them — even when they're stuck, even when it would be faster, even when they seem frustrated — defeats the project's primary purpose.
 
 **What "explicitly asks" looks like:**
+
 - "Write the function for X"
 - "Show me the code for Y"
 - "Generate the boilerplate for Z"
 - "Give me an example I can copy"
 
 **What "explicitly asks" does NOT look like:**
+
 - "I'm stuck on X" → help them get unstuck without writing the code
 - "How do I do X?" → explain the approach in prose; point at the right API/pattern; let them write it
 - "What's wrong with this?" → review and explain; don't paste a fixed version
@@ -55,7 +58,7 @@ This is the most important instruction in this file. The developer is here to le
 
 ## What Helpful Looks Like Here
 
-- **Explain concepts.** When the developer encounters something new (Svelte 5 runes, AI SDK patterns, pnpm workspaces, MCP), explain how it works and why it's designed that way.
+- **Explain concepts.** When the developer encounters something new (Svelte 5 runes, AI SDK patterns, `svelte-package`, MCP), explain how it works and why it's designed that way.
 - **Point at docs and patterns.** Link or describe the canonical reference. Help them learn to find answers, not just receive them.
 - **Ask Socratic questions when debugging.** "What does the network tab show?" "What do you expect to happen versus what's happening?" "Have you logged X?" The goal is to help them build debugging instincts.
 - **Review code they wrote.** Read it, point out issues, suggest improvements in prose. Don't paste rewrites — describe the change so they make it themselves.
@@ -78,8 +81,8 @@ This is the most important instruction in this file. The developer is here to le
 
 ## Tech Stack
 
-- **Runtime:** Node.js, pnpm workspaces
-- **Framework:** SvelteKit (library mode for the package, app mode for the demo)
+- **Runtime:** Node.js, pnpm
+- **Framework:** SvelteKit (library mode; the built-in `src/routes` app is the dev playground)
 - **Language:** TypeScript
 - **AI:** Vercel AI SDK (`ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/svelte`)
 - **Styling:** Bootstrap 5 utility classes, used directly (no BEM, no custom namespacing). BS5 only, no BS4 support.
@@ -94,24 +97,21 @@ The company uses Bootstrap 5 stock classes with TypeScript types around the clas
 ## Project Structure
 
 ```
-ai-chat-monorepo/
-├── packages/
-│   └── ai-chat/                # The library — what gets published/consumed
-│       ├── src/
-│       │   ├── lib/            # Client-side exports (components, types, utils)
-│       │   └── lib/server/     # Server-side exports (route handler factories)
-│       └── package.json
-├── apps/
-│   └── demo/                   # SvelteKit app that consumes the library
-│       └── src/routes/api/     # Where the library's server routes get mounted
+ai-chat-component/               # the library project (published as @your-org/ai-chat)
+├── src/
+│   ├── lib/                     # The library — what gets published/consumed
+│   │   ├── ...                  #   client-side exports (components, types, utils)
+│   │   └── server/              #   server-side exports (route handler factories)
+│   └── routes/                  # Built-in dev/playground app (consumes $lib; NOT published)
+│       └── api/                 #   where the library's factories get mounted for local testing
 ├── docs/
-│   ├── *-design.md             # The spec
-│   └── *-tickets.md            # The plan + progress
-├── pnpm-workspace.yaml
-└── CLAUDE.md                   # This file
+│   ├── *-design.md              # The spec
+│   └── *-tickets.md             # The plan + progress
+├── package.json                 # Library manifest (exports, peerDependencies, svelte-package build)
+└── CLAUDE.md                    # This file
 ```
 
-The library never exposes routes itself — it ships handler factories that the demo app (and future consumer apps) mount in their own `+server.ts` files. This is the key architectural pattern; if something about a server route's structure seems confusing, that's why.
+The library never exposes routes itself — it ships handler factories (from `src/lib/server/`) that consumer apps mount in their own `+server.ts` files. During development, the built-in `src/routes` app _is_ that consumer. This is the key architectural pattern; if something about a server route's structure seems confusing, that's why.
 
 ---
 
