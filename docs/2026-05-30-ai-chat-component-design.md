@@ -8,7 +8,7 @@
 
 ## Overview
 
-A reusable Svelte / SvelteKit library component (`@your-org/ai-chat`) that provides a multi-provider AI chat interface for embedding in the company's various web apps. Built as a SvelteKit library in a pnpm monorepo with a demo app.
+A reusable Svelte / SvelteKit library component (`@your-org/ai-chat`) that provides a multi-provider AI chat interface for embedding in the company's various web apps. Built as a single SvelteKit library project (the `@sveltejs/package` template) whose built-in `src/routes` app doubles as a local demo/playground.
 
 ## Project Goals
 
@@ -48,24 +48,23 @@ A reusable Svelte / SvelteKit library component (`@your-org/ai-chat`) that provi
 
 ### Repository Structure
 
+Single SvelteKit **library project** (the `@sveltejs/package` template) — not a monorepo. One project holds both the publishable library and a local app to develop it in:
+
 ```
-your-ai-chat/
-├── packages/
-│   └── ai-chat/                # SvelteKit library
-│       ├── src/
-│       │   ├── lib/            # Components, stores, types, utils
-│       │   └── routes/api/     # Server endpoints the library ships
-│       ├── package.json
-│       └── svelte.config.js
-├── apps/
-│   └── demo/                   # SvelteKit app demoing the library
-│       ├── src/
-│       └── package.json
-├── package.json                # Root workspace config
-└── pnpm-workspace.yaml
+ai-chat-component/               # the library project (published as @your-org/ai-chat)
+├── src/
+│   ├── lib/                     # Published surface — svelte-package compiles this to dist/
+│   │   ├── ...                  #   components, stores, types, utils
+│   │   └── server/              #   handler factories consumers mount (e.g. createStreamHandler)
+│   └── routes/                  # Built-in demo/playground app (consumes $lib; NOT published)
+│       └── api/                 #   mounts the library's factories for local testing
+├── static/
+├── package.json                 # Library manifest: exports, peerDependencies, svelte-package build
+├── svelte.config.js
+└── vite.config.ts
 ```
 
-Built with `npm create svelte@latest` library template for the package, standard SvelteKit app for the demo. The demo imports the library via workspace protocol (`"@your-org/ai-chat": "workspace:*"`).
+`src/lib/` is the published surface — `svelte-package` compiles it to `dist/`, and `package.json`'s `exports` map is what external apps import. `src/routes/` is a local dev app that consumes the library through the `$lib` alias; it stands in for a real consumer app while you build, and is never published. The library ships **handler factories** from `src/lib/server/` (e.g. `createStreamHandler`); consumer apps — including this repo's own `src/routes` — mount them in their own `+server.ts` files. The library never exposes routes itself.
 
 ### High-Level Components
 
@@ -74,7 +73,7 @@ Built with `npm create svelte@latest` library template for the package, standard
 - `createChatSession()` — factory for session state and lifecycle
 - Type exports: `Message`, `ContentBlock`, `ChatSession`, `ContextEntry`, `Provider`, `StorageCallbacks`, etc.
 
-**Server-side (SvelteKit routes the library ships):**
+**Server-side (handler factories the library ships; the consumer app mounts the routes):**
 - `POST /api/ai-chat/stream` — streams LLM responses via Vercel AI SDK
 - `POST /api/ai-chat/upload` — placeholder for v1; built only if inline base64 proves insufficient
 
@@ -349,7 +348,7 @@ Component props expose styling decisions parent apps will want to customize:
 - **Vitest** — unit tests for provider abstraction, message/block parser, context merger, prompt assembler
 - **Playwright component tests** — chat UI behaviors (typing, send, streaming, attachment add/remove, provider switch modal, history open)
 - **Mock the Vercel AI SDK at its boundary** — no real API calls in CI
-- **Demo app contains opt-in smoke tests** that hit real APIs (env-gated, run manually) — useful for catching provider regressions
+- **The `src/routes` dev app contains opt-in smoke tests** that hit real APIs (env-gated, run manually) — useful for catching provider regressions
 
 ---
 
@@ -370,7 +369,7 @@ Component props expose styling decisions parent apps will want to customize:
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Repo structure | Monorepo, pnpm workspaces, packages/ + apps/ | Matches end goal of reusable package; demo app provides realistic sandbox |
+| Repo structure | Single SvelteKit library project (`@sveltejs/package` template); `src/lib` is published, `src/routes` is the built-in dev/playground | Simpler than a monorepo for one component; the library template already bundles a consumer playground, so a separate demo app isn't needed |
 | API key handling (v1) | Env vars only | Simplest; abstracted server-side so runtime keys are easy to add later |
 | Parent integration | Callback/event based | Backend-agnostic; matches user's existing pattern |
 | Context injection | Static baseline + dynamic per-route + manual | Flexible without overcomplication |
