@@ -33,9 +33,9 @@
 
 ---
 
-## Phase 0: Foundation
+## Phase 0: Foundation ==*DONE*==
 
-### Ticket 0.1 — Initialize monorepo skeleton
+### Ticket 0.1 — Initialize monorepo skeleton ==*DONE*==
 
 **Goal:** Empty monorepo with workspace config and git.
 
@@ -56,7 +56,7 @@
 
 ---
 
-### Ticket 0.2 — Initialize the library package
+### Ticket 0.2 — Initialize the library package ==*DONE*==
 
 **Goal:** `packages/ai-chat` is a working SvelteKit library project.
 
@@ -73,7 +73,7 @@
 
 ---
 
-### Ticket 0.3 — Initialize the demo app
+### Ticket 0.3 — Initialize the demo app ==*DONE*==
 
 **Goal:** `apps/demo` is a working SvelteKit app.
 
@@ -87,7 +87,7 @@
 
 ---
 
-### Ticket 0.4 — Wire the workspace dependency (first dopamine win)
+### Ticket 0.4 — Wire the workspace dependency (first dopamine win) ==*DONE*==
 
 **Goal:** The demo app imports a component from the library.
 
@@ -104,7 +104,7 @@
 
 ---
 
-### Ticket 0.5 — Add Bootstrap 5 to the demo app
+### Ticket 0.5 — Add Bootstrap 5 to the demo app ==*DONE*==
 
 **Goal:** BS5 is loaded so future styling has a real environment.
 
@@ -118,7 +118,7 @@
 
 ---
 
-### Ticket 0.6 — Set up env keys
+### Ticket 0.6 — Set up env keys ==*DONE*==
 
 **Goal:** API keys are loadable from `.env` in the demo app.
 
