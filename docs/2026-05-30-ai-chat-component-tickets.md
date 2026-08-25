@@ -183,7 +183,7 @@ Wherever a ticket names a monorepo path, translate it with this table:
 
 ## Phase 1: First Conversation with Claude
 
-### Ticket 1.1 — Install AI SDK packages
+### Ticket 1.1 — Install AI SDK packages _==DONE==_
 
 **Goal:** Vercel AI SDK installed in the library.
 
@@ -207,39 +207,64 @@ Wherever a ticket names a monorepo path, translate it with this table:
 
 ---
 
-### Ticket 1.2 — Create the streaming handler factory in the library
+### Ticket 1.2 — Create the streaming handler factory in the library _==DONE==_
 
 **Goal:** Library exports a `createStreamHandler` function that returns a SvelteKit `RequestHandler`.
 
-**New concepts in this ticket:**
+**Shape of the work — read before the steps.** You write one function that builds and returns another. The **outer** function is called once, at startup, with your Anthropic key. The **inner** function it returns runs on every HTTP request — it asks Claude for text and streams that back to the browser. The key is captured by the outer call, so the inner one can reach it on every request. Steps 1–2 build the shell, 3 turns the key into a provider, 4–5 do the Claude call, 6–7 type it and ship the export.
 
-| Concept               | What it is (one line)                                                                                                | Where to find it                                                      |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| factory function      | A function that _returns_ a configured function — here, one that returns a request handler with the API key baked in | search `javascript factory function pattern`                          |
-| `streamText`          | The core AI SDK call that sends a prompt/messages and streams tokens back                                            | AI SDK docs → **streamText**; search `ai sdk streamText`              |
-| provider adapter call | `anthropic('<model-id>')` picks which Claude model runs                                                              | search `ai sdk anthropic model`                                       |
-| package `exports` map | The `exports` field in `package.json` that defines subpaths (like `/server`) consumers import                        | SvelteKit docs → **Packaging**; search `package.json exports subpath` |
+**Inputs → outputs:**
 
-⚠️ **Version note:** the method that turns a `streamText` result into a streamed HTTP response has been **renamed across AI SDK versions** (`toDataStreamResponse` is the older name). The steps below use the older form — confirm the current name in your installed version's docs before trusting it. Same for the exact `streamText` options and Claude model ids (model names change; look up current ones in the Anthropic/AI SDK docs).
+- takes: `{ apiKey: string }`
+- returns: a `RequestHandler` — a function `(event) => Promise<Response>`
 
-**Steps:**
+**Parts list — each row is one piece you place:**
 
-- Create `src/lib/server/index.ts`.
-- Write `createStreamHandler(config: { apiKey: string })` that **returns** a `RequestHandler`. (That's the factory: the outer function captures the key; the inner function handles each request.)
-- Inside the handler, call `streamText(...)` with `model: anthropic('<a current Claude model id>')` and a hardcoded `prompt` for now (you make it real in 1.5).
-- Return the streamed response — older form: `result.toDataStreamResponse()` (see version note).
-- In `package.json`, add a subpath export so consumers can `import { createStreamHandler } from '@your-org/ai-chat/server'`:
-  ```json
-  "exports": {
-    ".": { "svelte": "./dist/index.js", "types": "./dist/index.d.ts" },
-    "./server": { "import": "./dist/server/index.js", "types": "./dist/server/index.d.ts" }
-  }
-  ```
-- Run `pnpm build` to confirm the build emits `dist/server/index.js`.
+| Part     | Exact form                                                                                         | From                  | Verify                                 |
+| -------- | -------------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------- |
+| provider | `createAnthropic({ apiKey })` — **not** bare `anthropic`, which ignores your key and reads env only | `@ai-sdk/anthropic`   | d.ts:1258 (`apiKey` option)            |
+| model    | `anthropic('claude-sonnet-5')` (or `'claude-opus-5'`)                                              | the provider above    | any current id passes straight through |
+| call     | `streamText({ model, prompt })`                                                                    | `ai`                  | ai-sdk.dev → streamText                |
+| response | `result.toUIMessageStreamResponse()`                                                               | result of `streamText`| `ai` d.ts:2815                         |
+| type     | `import type { RequestHandler } from '@sveltejs/kit'` — **not** `./$types` (this file isn't a route)| `@sveltejs/kit`       | hover it in VS Code                    |
+
+**Where each part goes (skeleton — the blanks are yours to fill):**
+
+```ts
+import { streamText } from 'ai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import type { RequestHandler } from '@sveltejs/kit';
+
+export const createStreamHandler = (config: { apiKey: string }) => {
+  // build the provider from config.apiKey  → createAnthropic(...)
+  return async (event) => {
+    // call streamText with the model + a hardcoded prompt
+    // return result.toUIMessageStreamResponse()
+  }; // ← this inner function is your RequestHandler
+};
+```
+
+**Steps — what each one accomplishes:**
+
+1. Open `src/lib/server/index.ts`; you already have `export const createStreamHandler = () => {}`.
+2. Add the three imports at the top of the skeleton. _(Hover each in VS Code to see its type.)_
+3. Make the factory take `config: { apiKey: string }` and **return** an `async (event) => { … }`. That `return` is the whole point — the returned inner function is what runs on each request.
+4. Above the `return`, build the provider: `createAnthropic({ apiKey: config.apiKey })`. Now you can call it like `anthropic('claude-sonnet-5')` to pick a model.
+5. Inside the inner function, call `streamText` with that model and a **hardcoded** `prompt` for now, then return `result.toUIMessageStreamResponse()`. (Real messages arrive in 1.5.)
+6. Annotate the returned function as `RequestHandler` so TypeScript checks its shape.
+7. Add the `./server` subpath to `package.json`, then run `pnpm build` and confirm `dist/server/index.js`:
+   ```json
+   "exports": {
+     ".": { "svelte": "./dist/index.js", "types": "./dist/index.d.ts" },
+     "./server": { "import": "./dist/server/index.js", "types": "./dist/server/index.d.ts" }
+   }
+   ```
 
 **Done when:** Build succeeds and the `./server` export resolves.
 
 **Why a factory, not a route?** A library SvelteKit project doesn't expose routes itself — it ships code the consumer mounts. Returning a handler (instead of hardcoding one) is what lets every parent app pass its own key and mount the route at its own path.
+
+**Stuck? Ask before grinding.** If the factory `return`, closures, or the `RequestHandler` type still feel fuzzy, say so — that's a two-minute unblock, not a failure.
 
 ---
 
@@ -247,23 +272,41 @@ Wherever a ticket names a monorepo path, translate it with this table:
 
 **Goal:** Demo app exposes `/api/ai-chat/stream` using the library handler, and it actually talks to Claude.
 
-**New concepts in this ticket:**
+**Shape of the work — read before the steps.** This ticket writes almost no logic. You built the handler in 1.2; here you _mount_ it. A SvelteKit route file (`+server.ts`) exports functions named after HTTP methods — whatever you assign to `POST` handles POST requests. You call `createStreamHandler` once with your real key and assign what it returns to `POST`. Then you prove it works with `curl`.
 
-| Concept                       | What it is (one line)                                                                                      | Where to find it                                                               |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `$lib` alias                  | SvelteKit shortcut pointing at `src/lib` — import your own library code without `../../..` paths           | SvelteKit docs → **`$lib`**; search `sveltekit $lib alias`                     |
-| assigning a handler to `POST` | An endpoint's `POST`/`GET` export can be _any_ `RequestHandler` value — including one your factory returns | SvelteKit docs → **Routing → +server**; search `sveltekit +server POST export` |
-| `curl -X POST`                | Command-line way to send a POST request to test an endpoint without a browser                              | search `curl POST request example`                                             |
+**Inputs → outputs:**
 
-(You already met `+server.ts` endpoints and `$env/static/private` in 0.6.)
+- takes: your key from the server-only env module (`ANTHROPIC_API_KEY`)
+- produces: `src/routes/api/ai-chat/stream/+server.ts`, which exports `POST` — the live endpoint at `/api/ai-chat/stream`
 
-**Steps:**
+**Parts list — each row is one piece you place:**
 
-- Create `src/routes/api/ai-chat/stream/+server.ts`.
-- Import `createStreamHandler` from `$lib/server` (dev app is part of this project, so use `$lib`; an external consumer would import from `@your-org/ai-chat/server`).
-- Import `ANTHROPIC_API_KEY` from `$env/static/private`.
-- Export the handler as `POST`: `export const POST = createStreamHandler({ apiKey: ANTHROPIC_API_KEY })`. Notice you're _assigning_ a ready-made handler, not writing a function body — the factory already built it.
-- With the dev server running, test: `curl -X POST http://localhost:5173/api/ai-chat/stream` (you may need the server running in a second terminal).
+| Part           | Exact form                                                | From                  | Verify                                    |
+| -------------- | --------------------------------------------------------- | --------------------- | ----------------------------------------- |
+| the route file | `src/routes/api/ai-chat/stream/+server.ts`                | you create it         | folder path = the URL path                |
+| the factory    | `createStreamHandler`                                     | `$lib/server`         | it's your 1.2 export (`$lib` = `src/lib`) |
+| the key        | `ANTHROPIC_API_KEY`                                       | `$env/static/private` | it's in your `.env` (from 0.6)            |
+| the mount      | `export const POST = createStreamHandler({ apiKey: … })`  | this file             | SvelteKit maps the `POST` export → POSTs  |
+
+**Where each part goes (skeleton — the blank is yours):**
+
+```ts
+// src/routes/api/ai-chat/stream/+server.ts
+import { createStreamHandler } from '$lib/server';
+import { ANTHROPIC_API_KEY } from '$env/static/private';
+
+export const POST = /* call the factory with { apiKey: ANTHROPIC_API_KEY } */;
+```
+
+**Steps — what each one accomplishes:**
+
+1. Create the route file at `src/routes/api/ai-chat/stream/+server.ts`. The folder path becomes the URL — that's SvelteKit's file-based routing.
+2. Import your factory from `$lib/server`. `$lib` is SvelteKit's alias for `src/lib`, so you skip `../../..`. (An outside app would import from `@your-org/ai-chat/server`.)
+3. Import `ANTHROPIC_API_KEY` from `$env/static/private`. The `private` module is server-only, so the key never ships to the browser.
+4. Fill the blank: assign `createStreamHandler({ apiKey: ANTHROPIC_API_KEY })` to `export const POST`. You're _assigning_ a ready-made handler, not writing a function body — 1.2 already built it.
+5. Start the dev server (`pnpm dev`), and in a second terminal run: `curl -N -X POST http://localhost:5173/api/ai-chat/stream`. The `-N` turns off buffering so you actually see it stream.
+
+**Heads-up on the output:** because your handler returns `toUIMessageStreamResponse()`, the curl output is a series of `data: {…}` lines (Server-Sent Events), not clean prose. That's _correct_ — it's the streaming protocol the chat UI decodes in 1.5. Seeing `data:` lines means it worked.
 
 **Done when:** The curl response streams text from Claude.
 
@@ -275,55 +318,135 @@ Wherever a ticket names a monorepo path, translate it with this table:
 
 **Goal:** An `<AIChat />` component renders a chat UI (no AI wiring yet).
 
-**New concepts in this ticket:**
+**Shape of the work — read before the steps.** You're building only the _visual shell_ — no network calls yet. A Svelte component holds reactive state (the message list, the textbox value), renders the list, and on send pushes a new message and clears the box. In Svelte 5, "reactive" means declared with the `$state` rune — plain `let` won't update the screen. You'll lay it out with Bootstrap utility classes, then swap `HelloChat` for `AIChat` in the exports and on the demo page.
 
-| Concept         | What it is (one line)                                                                            | Where to find it                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `.svelte` file  | A component: `<script>` for logic, markup below, optional `<style>`                              | Svelte docs → **.svelte files**; search `svelte 5 component structure` |
-| `$state` rune   | Svelte 5's way to declare **reactive** local state — plain `let` is _not_ reactive in runes mode | Svelte docs → **$state**; search `svelte 5 $state rune`                |
-| `{#each}` block | Loops over an array to render a list (your messages)                                             | Svelte docs → **{#each}**; search `svelte each block`                  |
-| event handler   | `onclick={...}` / form `onsubmit` to run code on interaction                                     | Svelte docs → **Basic markup**; search `svelte 5 onclick event`        |
+**Inputs → outputs:**
 
-⚠️ **Gotcha (Svelte 5):** reactive state must use `$state()` — e.g. `let messages = $state([])`, **not** `let messages = []`. Plain `let` won't re-render the UI when you push to it. If you learned Svelte 4, this is the single biggest change. (Tip: the Svelte MCP tools / autofixer in this repo will catch runes mistakes for you.)
+- takes: nothing yet (no props this ticket)
+- produces: `src/lib/AIChat.svelte`, exported from `src/lib/index.ts`, rendered on the demo page
 
-**Steps:**
+**Parts list — each row is one piece you place:**
 
-- In `src/lib/`, create `AIChat.svelte`.
-- Layout with BS5 utilities: outer `class="d-flex flex-column"` with a fixed height (`style="height: 600px"` for now); a header div; a flex-grow message list `class="flex-grow-1 overflow-auto p-3"`; a composer at the bottom with `<textarea class="form-control">` and `<button class="btn btn-primary">Send</button>`.
-- Reactive state **using `$state`**: a `messages` array of `{ role, content }`, and an `input` string.
-- On send: push `{ role: 'user', content: input }` onto `messages`, then clear `input`.
-- Render the list with `{#each}`, showing each message's role + content.
-- Update `src/lib/index.ts` to export `AIChat` (remove `HelloChat`).
-- In `src/routes/+page.svelte`, render `<AIChat />` instead of `<HelloChat />`.
+| Part          | Exact form                                                                           | Why it's needed             | Verify                |
+| ------------- | ------------------------------------------------------------------------------------ | --------------------------- | --------------------- |
+| reactive list | `let messages = $state([])`                                                          | plain `let` won't re-render | Svelte docs → $state  |
+| reactive box  | `let input = $state('')`                                                             | same                        | —                     |
+| the loop      | `{#each messages as m}…{/each}`                                                       | renders each message        | Svelte docs → {#each} |
+| send handler  | `onclick={send}` / form `onsubmit={send}`                                            | runs code on click/submit   | Svelte docs → markup  |
+| layout        | `d-flex flex-column`, `flex-grow-1 overflow-auto`, `form-control`, `btn btn-primary` | company Bootstrap convention| —                     |
+
+**Where each part goes (skeleton — the blanks are yours):**
+
+```svelte
+<script lang="ts">
+  let messages = $state<{ role: string; content: string }[]>([]);
+  let input = $state('');
+
+  function send() {
+    // push { role: 'user', content: input } onto messages, then set input = ''
+  }
+</script>
+
+<div class="d-flex flex-column" style="height: 600px">
+  <!-- header -->
+  <div class="flex-grow-1 overflow-auto p-3">
+    <!-- {#each messages as m} … render m.role + m.content … {/each} -->
+  </div>
+  <!-- composer: <textarea class="form-control" bind:value={input}> + Send button -->
+</div>
+```
+
+**Steps — what each one accomplishes:**
+
+1. Create `src/lib/AIChat.svelte`.
+2. In `<script>`, declare two pieces of state with `$state`: `messages` (an array of `{ role, content }`) and `input` (a string). **Gotcha:** it must be `$state([])`, not `[]` — plain `let` is not reactive in Svelte 5, so the UI won't update when you push.
+3. Build the layout with Bootstrap utilities: an outer `d-flex flex-column` with a fixed `height`, a header, a scrolling message area (`flex-grow-1 overflow-auto p-3`), and a composer (`<textarea class="form-control">` + `<button class="btn btn-primary">Send</button>`).
+4. Bind the textarea to `input` with `bind:value={input}`, and wire the button (or a wrapping `<form>`'s `onsubmit`) to a `send` function.
+5. In `send`, push `{ role: 'user', content: input }` onto `messages`, then set `input = ''`. That's the whole behavior for now.
+6. Render the list with `{#each messages as m}`, showing `m.role` and `m.content`.
+7. In `src/lib/index.ts`, export `AIChat` and remove `HelloChat`. In `src/routes/+page.svelte`, render `<AIChat />` instead of `<HelloChat />`.
 
 **Done when:** The demo app shows a chat UI. Typing and clicking Send appends a "user:" message to the list.
 
 ---
 
-### Ticket 1.5 — Wire `useChat` to the streaming route (the magic moment)
+### Ticket 1.5 — Wire the chat to the streaming route (the magic moment)
 
 **Goal:** The component actually talks to Claude. The hardcoded prompt in 1.2 becomes the real conversation.
 
-**New concepts in this ticket:**
+**Shape of the work — read before the steps.** Two edits, one on each side. **Server:** your 1.2 handler reads `messages` from the request body and passes them to `streamText`. It's already close — but it has two bugs from an earlier session that this ticket fixes. **Component:** replace the fake local `messages` state from 1.4 with the AI SDK's `Chat` object. That object sends messages to your endpoint and collects the streamed reply for you. Version catch: your `@ai-sdk/svelte@5` has **no `useChat`** — it exports a `Chat` class you instantiate. All of this is pinned below.
 
-| Concept                      | What it is (one line)                                                               | Where to find it                                                                                   |
-| ---------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `@ai-sdk/svelte` chat helper | Connects your component to the streaming endpoint and manages message state for you | AI SDK docs → Svelte section; search `ai sdk svelte useChat` (see version note)                    |
-| reading the request body     | Server side: `await request.json()` to get the `messages` the client sent           | SvelteKit docs → **Routing → +server** ("Receiving data"); search `sveltekit +server request.json` |
+**✅ Pinned API — verified 2026-08-23 against the `.d.ts` files actually in your `node_modules`.**
+Installed: **`ai@7.0.77`**, **`@ai-sdk/svelte@5.0.77`**, **`@ai-sdk/anthropic@4.0.41`**. (Earlier drafts of this ticket cited `ai` v5 line numbers — ignore any you see elsewhere. Line numbers below are from `ai@7.0.77/dist/index.d.ts` unless noted.)
 
-⚠️ **Version note (read before starting):** the `@ai-sdk/svelte` chat API has **changed shape across versions**. Older versions export `useChat(...)` returning stores (`$input`, `$messages`, `handleSubmit`); newer versions export a `Chat` **class** you instantiate (`new Chat({...})`). The steps below are written in the older `useChat` style as a _starting reference_ — open the `@ai-sdk/svelte` docs for your installed version and adapt. This is the single most likely spot to hit an API mismatch.
+| The thing | Correct call for your versions | Verified at |
+| --- | --- | --- |
+| convert client messages | `await convertToModelMessages(messages)` — **it's `async` in v7**, returns `Promise<ModelMessage[]>` | index.d.ts:5589 |
+| feed the model | `streamText({ model, messages })` — `messages` must be the **awaited** `ModelMessage[]`, not the promise | index.d.ts:715 |
+| return the stream | `return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })` | index.d.ts:5958 + 6031 |
+| chat object | `new Chat({ transport: new DefaultChatTransport({ api }) })` | `Chat` = chat.svelte.d.ts; `DefaultChatTransport` = index.d.ts:5699 |
+| transport `api` option | `new DefaultChatTransport({ api: '/api/ai-chat/stream' })` | index.d.ts:5638 (`api?: string`) |
+| send a message | `chat.sendMessage({ text: input })` → `Promise<void>` | AbstractChat, index.d.ts:5491+ |
+| render the list | `chat.messages` (getter → `UIMessage[]`) | AbstractChat, index.d.ts:5491+ |
+| streaming flag | `chat.status` → `'submitted' \| 'streaming' \| 'ready' \| 'error'` | AbstractChat, index.d.ts:5491+ |
+| a text part | `part.type === 'text'` → `part.text` (string) | TextUIPart, index.d.ts |
 
-**Steps (adapt to your installed version — see note):**
+**⚠️ Two bugs already in your `src/lib/server/index.ts` (from an earlier session) — fixing them IS step 1:**
 
-- **Server:** update `createStreamHandler` to read `messages` from the request body and pass them to `streamText` instead of the hardcoded prompt. Shape: `const { messages } = await request.json(); ... streamText({ model: anthropic(...), messages })`.
-- **Component:** import the chat helper from `@ai-sdk/svelte` and point it at `/api/ai-chat/stream`. Older form: `const { input, messages, handleSubmit } = useChat({ api: '/api/ai-chat/stream' })`.
-- Replace the local `$state` you wrote in 1.4 with the state the helper manages.
-- Wire the textarea to the helper's input, and the form's submit to its submit handler.
-- Render the helper's messages instead of your local array.
+1. `messages: convertToModelMessages(messages)` passes a **`Promise`** where `streamText` wants a `ModelMessage[]`. Add `await`.
+2. The return is wired to the wrong function. The pieces `toUIMessageStream({ stream: result.stream })` are correct, but they're passed as an argument to `result.toUIMessageStreamResponse({ ... })` — which is (a) `@deprecated` in v7 (index.d.ts:2811) and (b) ignores that argument entirely. Feed those same pieces to the standalone `createUIMessageStreamResponse({ ... })` instead. That's the non-deprecated helper the SDK's own deprecation note points you to.
+
+**Inputs → outputs:**
+
+- Server takes `{ messages }` from `await event.request.json()`; returns the streamed response.
+- Component: `chat.messages` is the live list you render; `chat.sendMessage({ text })` sends one; `chat.status` tells you if it's streaming.
+
+**Where each part goes (skeletons — the blanks are yours):**
+
+```ts
+// SERVER — src/lib/server/index.ts, inside the returned handler (fix your existing code)
+// imports from 'ai': convertToModelMessages, streamText, toUIMessageStream, createUIMessageStreamResponse
+const { messages } = await event.request.json();
+const result = streamText({
+  model: anthropic('claude-sonnet-5'),
+  messages: await convertToModelMessages(messages), // ← note the await (v7 is async)
+});
+return createUIMessageStreamResponse({
+  stream: toUIMessageStream({ stream: result.stream }), // ← non-deprecated path
+});
+```
+
+```svelte
+<!-- COMPONENT — src/lib/AIChat.svelte -->
+<script lang="ts">
+  import { Chat } from '@ai-sdk/svelte';
+  import { DefaultChatTransport } from 'ai';
+
+  const chat = new Chat({
+    transport: new DefaultChatTransport({ api: '/api/ai-chat/stream' }),
+  });
+  let input = $state('');
+
+  function send(event: SubmitEvent) {
+    // event.preventDefault(); chat.sendMessage({ text: input }); then input = ''
+  }
+</script>
+
+<!-- render chat.messages; each message has message.parts — iterate the text parts -->
+```
+
+**Steps — what each one accomplishes:**
+
+1. **Server first — fix the two bugs.** In your handler: (a) change `convertToModelMessages(messages)` to `await convertToModelMessages(messages)` — in `ai@7` this function is `async`, so without `await` you hand `streamText` a `Promise` and `svelte-check` will flag the type mismatch. (b) Replace the whole `return result.toUIMessageStreamResponse({ … })` line with `return createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })`. Make sure both `toUIMessageStream` and `createUIMessageStreamResponse` are imported from `'ai'`. `toUIMessageStream` turns the model's raw text stream into UI-message chunks; `createUIMessageStreamResponse` wraps those chunks into the HTTP `Response` the `Chat` object decodes. (Why not `result.toUIMessageStreamResponse()`? It's `@deprecated` in v7 — the SDK's own note points you to these two helpers.)
+2. **Verify the server in isolation** before touching the component: `pnpm check` should pass, then `curl -N -X POST http://localhost:5173/api/ai-chat/stream -H "content-type: application/json" -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"hi"}]}]}'`. You want a stream of `data:` lines back. (This is the same shape the `Chat` object sends, so if curl works, the component will too.)
+3. **Component.** Import `Chat` from `@ai-sdk/svelte` and `DefaultChatTransport` from `ai`, then create the `chat` object pointed at your route. Without the transport it defaults to `/api/chat`, which isn't your endpoint.
+4. Keep your local `let input = $state('')` from 1.4 — the `Chat` class does **not** manage the textbox for you (the biggest change from the old `useChat`).
+5. In `send`, call `chat.sendMessage({ text: input })`, then clear `input`. Delete the manual `messages.push(...)` and your old `messages` `$state` — the chat object owns the list now.
+6. Render `{#each chat.messages as message}` instead of your 1.4 array. **Shape changed:** a message carries a `parts` array (typed pieces), not a single `content` string. Each text piece is `{ type: 'text', text: string }`. Iterate `message.parts` and render the ones where `part.type === 'text'`. Run `console.log(chat.messages)` once to see the shape before you render it.
 
 **Done when:** You type a message, hit send, and watch Claude stream a response into the list, character by character. This is the magic moment — a real AI chat in a component you built.
 
-**Notes:** If streaming feels janky, check that you're using `result.toDataStreamResponse()` (not plain text) — the SDK has a specific protocol the Svelte hook expects.
+**Notes:** If nothing streams into the UI, confirm the server returns `createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })` — the `Chat` class only understands that exact protocol. If messages render blank, it's the `parts` vs `content` shape change from step 6. If TypeScript complains the server `messages` is `unknown`, that's expected from `event.request.json()` — you'll type it properly in Phase 3; for now the `convertToModelMessages` call is what matters.
 
 ---
 
