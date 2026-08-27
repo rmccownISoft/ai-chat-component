@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { Chat } from '@ai-sdk/svelte'
 	import { DefaultChatTransport } from 'ai'
+	import { untrack } from 'svelte'
+
+	// `api` = the URL the chat POSTs to. Defaults to the demo route, but each host
+	// app can override it to wherever it mounted its own server adapter.
+	let { api = '/api/ai-chat/stream' }: { api?: string } = $props()
 
 	let input = $state('')
 
@@ -8,7 +13,9 @@
 	const chat = new Chat({
 		// `transport` = where to send messages. Without it, Chat POSTs to
 		// `/api/chat` by default; we point it at our own route instead.
-		transport: new DefaultChatTransport({ api: '/api/ai-chat/stream' }),
+		// `untrack` reads `api` once, on purpose: it's mount-time config, not a
+		// value we re-read when the parent changes it.
+		transport: new DefaultChatTransport({ api: untrack(() => api) }),
 	})
 
 	function send(event: SubmitEvent) {
