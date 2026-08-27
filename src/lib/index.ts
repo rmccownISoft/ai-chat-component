@@ -1,2 +1,2 @@
 // Reexport your entry components here
-export { default as HelloChat } from './HelloChat.svelte'
+export { default as AIChat } from './AIChat.svelte'
