@@ -30,8 +30,10 @@
 ## Phases
 
 - [x] done — Phase 0: Foundation — working library project + demo playground + Bootstrap + env keys
-- [~] in progress — Phase 1: First Conversation — end-to-end streaming chat with Claude (1.1–1.3 done; 1.4–1.5 remain)
-- [~] expanded — Phase 2: Multi-Provider — OpenAI added, provider/model dropdowns, switch modal → phase-02-multi-provider.md
+- [x] done — Phase 1: First Conversation — end-to-end streaming chat with Claude
+- [~] in progress — Phase 2a: Provider Registry — OpenAI added, provider+model chosen per-request, both stream end-to-end → phase-02a-provider-registry.md
+- [ ] not started — Phase 2b: Provider UI — provider/model dropdowns, mid-chat switch confirm modal
+- [x] done — Phase 2c: Host-portable server — split the SvelteKit-only handler into a neutral core + SvelteKit/Express adapters; endpoint is now a prop. Done ahead of 2a/2b as a spike; see → phase-02c-host-portable-server.md
 - [ ] not started — Phase 3: Typed Content Blocks — string messages → typed blocks with stable IDs
 - [ ] not started — Phase 4: Context Injection — baseline + route + manual context, prompt assembly, memory badge
 - [ ] not started — Phase 5: Session Persistence — save/load/list via parent callbacks, history UI

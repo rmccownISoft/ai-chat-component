@@ -23,6 +23,10 @@ A reusable Svelte / SvelteKit library component (`@your-org/ai-chat`) that provi
 ## Goals (Functional)
 
 - Reusable across multiple internal SvelteKit apps
+  - ⚠️ **Superseded (Phase 2c) — see decisions-log Active.** Most target apps are actually
+    Svelte + Express + `abstract-state-router`; only a few are SvelteKit. The component now targets
+    **both** via a neutral server core + per-host adapters. Read this line as "reusable across
+    Express+ASR and SvelteKit hosts."
 - Support both Anthropic (Claude) and OpenAI providers via the Vercel AI SDK
 - Provider and model selection via dropdowns
 - Multimodal input (images, PDFs, text files)
@@ -65,6 +69,12 @@ ai-chat-component/               # the library project (published as @your-org/a
 ```
 
 `src/lib/` is the published surface — `svelte-package` compiles it to `dist/`, and `package.json`'s `exports` map is what external apps import. `src/routes/` is a local dev app that consumes the library through the `$lib` alias; it stands in for a real consumer app while you build, and is never published. The library ships **handler factories** from `src/lib/server/` (e.g. `createStreamHandler`); consumer apps — including this repo's own `src/routes` — mount them in their own `+server.ts` files. The library never exposes routes itself.
+
+> ⚠️ **Superseded (Phase 2c) — see decisions-log Active.** "their own `+server.ts` files" is
+> SvelteKit-only phrasing. The server is now a host-neutral `core.ts` plus per-host adapters:
+> SvelteKit hosts mount `createStreamHandler` in a `+server.ts`; Express hosts mount
+> `createExpressHandler` on an Express route. The "ships factories, never exposes routes itself"
+> principle still holds — there are just two factory shapes now.
 
 ### High-Level Components
 

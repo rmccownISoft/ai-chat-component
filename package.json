@@ -32,8 +32,16 @@
 			"svelte": "./dist/index.js"
 		},
 		"./server": {
-			"types": "./dist/server/index.d.ts",
-			"import": "./dist/server/index.js"
+			"types": "./dist/server/core.d.ts",
+			"import": "./dist/server/core.js"
+		},
+		"./server/sveltekit": {
+			"types": "./dist/server/sveltekit.d.ts",
+			"import": "./dist/server/sveltekit.js"
+		},
+		"./server/express": {
+			"types": "./dist/server/express.d.ts",
+			"import": "./dist/server/express.js"
 		}
 	},
 	"peerDependencies": {
