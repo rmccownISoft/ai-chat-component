@@ -38,13 +38,13 @@ closed list — enforcing it is what stops "extra docs" from accumulating.
    overview, architecture, data model, goals, and **non-goals**. Written once
    during setup and approved by the user before any planning. Changes rarely
    (only on a deliberate scope change). This is what lets anyone — including a
-   cold session — understand the *project*, which a skeleton of one-line phase
+   cold session — understand the _project_, which a skeleton of one-line phase
    goals cannot convey.
 1. **`skeleton.md`** — the dashboard. A one-line goal per phase, each with a
    status marker and (once generated) a link to its phase doc. Derived FROM the
    design spec. This is the user's map of where they are. It changes a little
    every session.
-2. **`decisions-log.md`** — ground truth for what *changed*. The record of
+2. **`decisions-log.md`** — ground truth for what _changed_. The record of
    amendments and gotchas discovered while building. It grows in bursts at
    close-out. Its `Active` section is authoritative: if a plan step ever
    contradicts it, that is an error. **When the log and the design spec
@@ -75,7 +75,7 @@ the current phase doc (what do I do). The spec and log are Claude's reference.
 
 Trigger: the user wants a plan for a new learning project.
 
-1. **Interview.** Ask what they're building, what they want to *learn* from it
+1. **Interview.** Ask what they're building, what they want to _learn_ from it
    (the learning goal often drives the phase breakdown), rough scope, and
    constraints (language, libraries, platform). Keep it focused.
 2. **Write `design-spec.md` and get approval.** Summarize the project back as a
@@ -101,8 +101,10 @@ Trigger: the user wants a plan for a new learning project.
 # [Project name] — plan
 
 <!-- ===== FOR CLAUDE: read this first if you're a fresh session ===== -->
+
 > **Claude, start here.** This project uses the `learning-project-planner` skill —
 > apply it. Before doing anything else:
+>
 > 1. Read `design-spec.md` for what this project is and its non-goals.
 > 2. Read `decisions-log.md`. Its **Active** section is ground truth; never write
 >    a step that contradicts it. If it conflicts with the spec, the log wins.
@@ -110,20 +112,23 @@ Trigger: the user wants a plan for a new learning project.
 >    is where work stands.
 > 4. To expand the next phase or close out the current one, follow the skill's
 >    procedures. Never expand more than one phase ahead. Never edit completed docs.
-> If the skill isn't loaded, ask the user to enable it.
+>    If the skill isn't loaded, ask the user to enable it.
+
 <!-- ================================================================= -->
 
 ## How this works
+
 - You touch two files: this skeleton (where you are) and the current phase doc.
 - Start a phase: say "expand phase N".
 - When a phase actually works and you're moving on: say "close out phase N".
 - Only one phase is ever expanded at a time. That's on purpose.
 
 ## Phases
+
 - [ ] not started — Phase 1: <one-line goal>
 - [ ] not started — Phase 2: <one-line goal>
 - [ ] not started — Phase 3: <one-line goal>
-...
+      ...
 ```
 
 ### `decisions-log.md` template
@@ -132,9 +137,11 @@ Trigger: the user wants a plan for a new learning project.
 # Decisions & gotchas
 
 ## Active (ground truth — read before planning anything)
+
 <the rules, library choices, and gotchas currently in force. Empty at start.>
 
 ## History (why things changed — reference only)
+
 <append-only reasoning. Empty at start.>
 ```
 
@@ -173,19 +180,19 @@ first sub-phase only.
   bare term, concept name, or CSS/class name — those are pointers to knowledge
   the user does not have yet, and they read as steps only to someone who already
   knows the answer. The user fails at abstractions and needs a concrete example
-  as the *minimum*. So every step shows a small code snippet of the shape, with
+  as the _minimum_. So every step shows a small code snippet of the shape, with
   the meaningful part left blank for the user to fill in. "Use `$state`" is a
   failure; showing `let count = $state(0)` and saying "make two like this, one
   for X one for Y" is correct. If a step names a thing, it must also show that
   thing's shape in code. When trimming for length, cut connective prose — NEVER
   cut the snippet. The snippet is the step; the words around it are optional.
-- **One screen per phase doc.** Terse *prose framing* around concrete snippets —
+- **One screen per phase doc.** Terse _prose framing_ around concrete snippets —
   not walls of explanation, but not bare labels either. No essay-length
   "shape of the work" sections. The snippet carries the weight.
 - **Steps are sub-30-minute.** Each step shows what it needs in code: the import
   line, the function call with its arguments, the element with its classes.
 - **Plain-language jargon notes.** Any library, function, or concept term gets a
-  3–5 word plain-English note in parentheses the *first* time it appears — AND a
+  3–5 word plain-English note in parentheses the _first_ time it appears — AND a
   code snippet showing it in use. The note alone is never enough; the user
   cannot act on a term they can only read a definition of.
 - **No silent guessing.** Every step that names a real function or API must
@@ -198,33 +205,36 @@ first sub-phase only.
 
 ### Example of a well-formed step (numbered, show-don't-name)
 
-Each numbered step opens with a bold *action* and a checkbox, then shows the
+Each numbered step opens with a bold _action_ and a checkbox, then shows the
 code directly beneath. The user can read just the bold lines to see the flow.
 
-```markdown
+````markdown
 ### 1.4 — Build the component shell · ~25 min
 
 1. [ ] **Create the file** `src/lib/AIChat.svelte`.
 
 2. [ ] **Add two reactive variables.** Svelte 5's `$state()` makes a variable
-   update the screen — shape is `let count = $state(0)`.
+       update the screen — shape is `let count = $state(0)`.
    ```js
    let messages = $state(...);  // ← you: empty array
    let input = $state(...);     // ← you: empty string
    ```
-   Gotcha: must be `$state([])`, not `[]`, or the UI won't update.
+````
+
+Gotcha: must be `$state([])`, not `[]`, or the UI won't update.
 
 3. [ ] **Render the list** — a `<div>` with Bootstrap classes and a loop:
    ```svelte
    <div class="flex-grow-1 overflow-auto p-3">
-     {#each messages as m}
-       <!-- ← you: show m.role and m.content -->
-     {/each}
+   	{#each messages as m}
+   		<!-- ← you: show m.role and m.content -->
+   	{/each}
    </div>
    ```
 
 - Look up: `svelte 5 $state runes`
 - Done when: typing appends a line to the list.
+
 ```
 
 Contrast — the SAME items as bare labels are FAILURES the user cannot act on:
@@ -268,3 +278,4 @@ corrections only ever move *forward* (via the log), never leave rot behind. And
 the format rules exist because a plan the user can't read or can't act on is
 worse than no plan — show real code, never bare terms. When in doubt, favor
 terseness and plain language over completeness.
+```
