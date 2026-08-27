@@ -1,9 +1,4 @@
-import {
-	convertToModelMessages,
-	createUIMessageStreamResponse,
-	streamText,
-	toUIMessageStream,
-} from 'ai'
+import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import type { RequestHandler } from '@sveltejs/kit'
 
