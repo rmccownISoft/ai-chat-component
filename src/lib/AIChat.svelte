@@ -2,10 +2,14 @@
 	import { Chat } from '@ai-sdk/svelte'
 	import { DefaultChatTransport } from 'ai'
 
+	let input = $state('')
+
+	// Chat is reactive, handles the collected messages for us so chat.messages is reactive
 	const chat = new Chat({
+		// `transport` = where to send messages. Without it, Chat POSTs to
+		// `/api/chat` by default; we point it at our own route instead.
 		transport: new DefaultChatTransport({ api: '/api/ai-chat/stream' }),
 	})
-	let input = $state('')
 
 	function send(event: SubmitEvent) {
 		event.preventDefault()
